@@ -39,6 +39,55 @@ async function run() {
       res.send(services);
     });
 
+    // ! Warning
+    // ! This is not the proper way to query.
+    // TODO: After learning more about mongodb. use aggregate lookup, pipeline, match, group
+    //  GET Available Booking
+    app.get("/available", async (req, res) => {
+      const date = req.query.date;
+      console.log(date);
+
+      //   step 1: get all services
+      const services = await serviceCollection.find().toArray();
+
+      //  step 2: get the booking of the day. output: [{}, {}, {}, {}, {}, {}]
+      const query = { date: date };
+      const bookings = await bookingCollection.find(query).toArray();
+
+      //  step 3: for each service
+      services.forEach((service) => {
+        //  step 4: find bookings for that service. output: [{}, {}, {}, {}]
+        const serviceBookings = bookings.filter(
+          (booking) => booking.treatment === service.name
+        );
+
+        //  step 5: select slots for the serviceBookings .output : ["", "", "", ""]
+        // BookedSlots
+        const bookedSlots = serviceBookings.map((booking) => booking.slot);
+        service.bookedSlots = bookedSlots;
+
+        //  step 6: select those slots that are not in bookedSlots
+        // AvailableSlots
+        const availableSlots = service.slots.filter(
+          (slot) => !bookedSlots.includes(slot)
+        );
+
+        // service.availableSlots = availableSlots;
+        // step 7: set availableSlots to slots to make it easier
+        service.slots = availableSlots;
+      });
+      res.send(services);
+    });
+
+    /**
+     * * API Naming Convention
+     * app.get("/booking") // get all booking in this collection or get more than one or by filter
+     * app.get("/booking/:id") // get a specific booking
+     * app.post("/booking") // add a new booking
+     * app.patch("/booking/:id") // update booking
+     * app.delete("/booking/:id") // delete booking
+     */
+
     // POST Booking
     app.post("/booking", async (req, res) => {
       const booking = req.body;
@@ -54,15 +103,6 @@ async function run() {
       const result = await bookingCollection.insertOne(booking);
       return res.send({ success: true, result });
     });
-
-    /**
-     * API Naming Convention
-     * app.get("/booking") // get all booking in this collection or get more than one or by filter
-     * app.get("/booking/:id") // get a specific booking
-     * app.post("/booking") // add a new booking
-     * app.patch("/booking/:id") // update booking
-     * app.delete("/booking/:id") // delete booking
-     */
   } finally {
   }
 }
