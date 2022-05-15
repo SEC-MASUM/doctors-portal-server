@@ -12,17 +12,33 @@ app.use(cors());
 app.use(express.json());
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.sw0ry.mongodb.net/myFirstDatabase?retryWrites=true&w=majority`;
+
 const client = new MongoClient(uri, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
   serverApi: ServerApiVersion.v1,
 });
-client.connect((err) => {
-  const collection = client.db("test").collection("devices");
-  // perform actions on the collection object
-  console.log("DB Connected");
-  client.close();
-});
+
+async function run() {
+  try {
+    await client.connect();
+
+    const servicesCollection = client
+      .db("doctors_portal")
+      .collection("services");
+
+    app.get("/service", async (req, res) => {
+      const query = {};
+      const cursor = servicesCollection.find(query);
+      const services = await cursor.toArray();
+
+      res.send(services);
+    });
+  } finally {
+  }
+}
+
+run().catch(console.dir);
 
 app.get("/", (req, res) => {
   res.send("Doctors Portal Server is Running");
